@@ -1,0 +1,347 @@
+apiVersion: v1
+kind: Template
+labels:
+  app: ldapexporter
+  template: ldapexporter-ephemeral
+metadata:
+  annotations:
+    description: OpenLDAP Exporter - ephemeral
+      see https://github.com/Worteks/docker-ldapexporter
+    iconClass: icon-openshift
+    openshift.io/display-name: OpenLDAP Exporter
+    tags: openldap,ldapexporter
+  name: ldapexporter-ephemeral
+objects:
+- apiVersion: v1
+  kind: DeploymentConfig
+  metadata:
+    labels:
+      name: openldap-${FRONTNAME}
+    name: openldap-${FRONTNAME}
+  spec:
+    replicas: 1
+    selector:
+      name: openldap-${FRONTNAME}
+    strategy:
+      type: Recreate
+    template:
+      metadata:
+        labels:
+          name: openldap-${FRONTNAME}
+      spec:
+        dnsPolicy: ClusterFirst
+        containers:
+        - capabilities: {}
+          env:
+          - name: OPENLDAP_BIND_LDAP_PORT
+            value: "1389"
+          - name: OPENLDAP_BIND_LDAPS_PORT
+            value: "1636"
+          - name: OPENLDAP_BLUEMIND_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: openldap-${FRONTNAME}
+                key: bluemind-password
+          - name: OPENLDAP_DEBUG_LEVEL
+            value: "${OPENLDAP_DEBUG_LEVEL}"
+          - name: OPENLDAP_DEMO_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: openldap-${FRONTNAME}
+                key: demo-password
+          - name: OPENLDAP_FUSION_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: openldap-${FRONTNAME}
+                key: fusion-password
+          - name: OPENLDAP_HOST_ENDPOINT
+            value: openldap-${FRONTNAME}
+          - name: OPENLDAP_LEMONLDAP_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: openldap-${FRONTNAME}
+                key: lemonldap-password
+          - name: OPENLDAP_LEMONLDAP_HTTPS
+            value: "yes"
+          - name: OPENLDAP_LEMONLDAP_SESSIONS_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: openldap-${FRONTNAME}
+                key: lemonldap-sessions-password
+          - name: OPENLDAP_LEMON_HTTP_PORT
+            value: "8080"
+          - name: OPENLDAP_MEDIAWIKI_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: openldap-${FRONTNAME}
+                key: mediawiki-password
+          - name: OPENLDAP_MONITOR_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: openldap-${FRONTNAME}
+                key: monitor-password
+          - name: OPENLDAP_NEXTCLOUD_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: openldap-${FRONTNAME}
+                key: nextcloud-password
+          - name: OPENLDAP_ORG_SHORT
+            value: "${WSWEET_ORG_NAME}"
+          - name: OPENLDAP_ROCKET_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: openldap-${FRONTNAME}
+                key: rocket-password
+          - name: OPENLDAP_ROOT_DN_PREFIX
+            value: cn=admin
+          - name: OPENLDAP_ROOT_DN_SUFFIX
+            value: "${WSWEET_BASE_SUFFIX}"
+          - name: OPENLDAP_ROOT_DOMAIN
+            value: "${WSWEET_ROOT_DOMAIN}"
+          - name: OPENLDAP_ROOT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: openldap-${FRONTNAME}
+                key: root-password
+          - name: OPENLDAP_SMTP_SERVER
+            value: "${WSWEET_SMTP_RELAY}"
+          - name: OPENLDAP_SSO_CLIENT_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: openldap-${FRONTNAME}
+                key: ssoapp-password
+          - name: OPENLDAP_SSP_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: openldap-${FRONTNAME}
+                key: ssp-password
+          - name: OPENLDAP_SYNCREPL_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: openldap-${FRONTNAME}
+                key: syncrepl-password
+          - name: OPENLDAP_WHITEPAGES_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: openldap-${FRONTNAME}
+                key: whitepages-password
+          - name: OPENLDAP_WSWEET_PASSWORD
+            valueFrom:
+              secretKeyRef:
+                name: openldap-${FRONTNAME}
+                key: wsweet-password
+          image: ' '
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            initialDelaySeconds: 30
+            timeoutSeconds: 1
+            tcpSocket:
+              port: 1389
+          name: openldap
+          ports:
+          - containerPort: 1389
+            protocol: TCP
+          - containerPort: 1636
+            protocol: TCP
+          readinessProbe:
+            exec:
+              command:
+              - /bin/sh
+              - "-i"
+              - "-c"
+              - /usr/local/bin/is-ready.sh
+            initialDelaySeconds: 5
+            timeoutSeconds: 1
+          resources:
+            limits:
+              cpu: "${OPENLDAP_CPU_LIMIT}"
+              memory: "${OPENLDAP_MEMORY_LIMIT}"
+          terminationMessagePath: /dev/termination-log
+          volumeMounts:
+          - name: conf
+            mountPath: /etc/openldap
+          - name: data
+            mountPath: /var/lib/ldap
+          - name: run
+            mountPath: /run
+        - capabilities: {}
+          env:
+          - name: EXPORTER_PORT
+            value: "9113"
+          - name: LDAP_BASE
+            value: ${WSWEET_BASE_SUFFIX}
+          - name: LDAP_BIND_DN_PREFIX
+            value: cn=monitor,ou=services
+          - name: LDAP_BIND_PW
+            valueFrom:
+              secretKeyRef:
+                name: openldap-${FRONTNAME}
+                key: monitor-password
+          - name: LDAP_DOMAIN
+            value: "${WSWEET_ROOT_DOMAIN}"
+          - name: LDAP_HOST
+            value: "127.0.0.1"
+          - name: LDAP_PORT
+            value: "1389"
+          image: ' '
+          imagePullPolicy: IfNotPresent
+          livenessProbe:
+            initialDelaySeconds: 30
+            periodSeconds: 20
+            tcpSocket:
+              port: 9113
+            timeoutSeconds: 3
+          name: exporter
+          ports:
+          - containerPort: 9113
+            protocol: TCP
+          readinessProbe:
+            initialDelaySeconds: 5
+            tcpSocket:
+              port: 9113
+            timeoutSeconds: 3
+          resources:
+            limits:
+              cpu: "${EXPORTER_CPU_LIMIT}"
+              memory: "${EXPORTER_MEMORY_LIMIT}"
+        restartPolicy: Always
+        volumes:
+        - emptyDir: {}
+          name: conf
+        - emptyDir: {}
+          name: data
+        - emptyDir: {}
+          name: run
+    triggers:
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+        - openldap
+        from:
+          kind: ImageStreamTag
+          name: ${OPENLDAP_IMAGESTREAM_TAG}
+        lastTriggeredImage: ''
+    - type: ImageChange
+      imageChangeParams:
+        automatic: true
+        containerNames:
+        - exporter
+        from:
+          kind: ImageStreamTag
+          name: ldapexporter-${OPENLDAP_EXPORTER_IMAGE_FRONTNAME}:${OPENLDAP_EXPORTER_IMAGE_TAG}
+        lastTriggeredImage: ''
+    - type: ConfigChange
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      template.openshift.io/expose-uri: ldaps://{.spec.clusterIP}:{.spec.ports[?(.name=="ldaps")].port}
+    name: openldap-${FRONTNAME}
+  spec:
+    ports:
+    - name: ldap
+      protocol: TCP
+      port: 1389
+      targetPort: 1389
+      nodePort: 0
+    - name: ldaps
+      protocol: TCP
+      port: 1636
+      targetPort: 1636
+      nodePort: 0
+    selector:
+      name: openldap-${FRONTNAME}
+    type: ClusterIP
+- apiVersion: v1
+  kind: Service
+  metadata:
+    annotations:
+      description: Exposes OpenLDAP Prometheus Exporter
+    labels:
+      ${PROMETHEUS_SERVICE_SELECTOR}: ${PROMETHEUS_SERVICE_MATCH}
+    name: ldapexporter-${FRONTNAME}
+  spec:
+    ports:
+    - name: exporter
+      port: 9113
+      targetPort: 9113
+    selector:
+      name: openldap-${FRONTNAME}
+    type: ClusterIP
+parameters:
+- name: EXPORTER_CPU_LIMIT
+  description: Maximum amount of CPU an exporter container can use
+  displayName: Exporters CPU Limit
+  required: true
+  value: 50m
+- name: EXPORTER_MEMORY_LIMIT
+  description: Maximum amount of Memory an exporter container can use
+  displayName: Exporters Memory Limit
+  required: true
+  value: 64Mi
+- name: FRONTNAME
+  description: The name identifier assigned to objects defined in this template
+  displayName: Name
+  required: true
+  value: demo
+- name: OPENLDAP_CPU_LIMIT
+  description: Maximum amount of CPU an OpenLDAP container can use
+  displayName: OpenLDAP CPU Limit
+  required: true
+  value: 300m
+- name: OPENLDAP_DEBUG_LEVEL
+  description: OpenLDAP log level
+  displayName: LDAP Log Level
+  required: true
+  value: '256'
+- name: OPENLDAP_EXPORTER_IMAGE_FRONTNAME
+  description: The name assigned to ImageStream object defined in corresponding template
+  displayName: Name
+  required: true
+  value: wsweet
+- name: OPENLDAP_EXPORTER_IMAGE_TAG
+  description: The ImageStreamTag we should pull images from
+  displayName: Tag
+  required: true
+  value: master
+- name: OPENLDAP_IMAGESTREAM_TAG
+  description: OpenLDAP Image Tag
+  displayName: OpenLDAP ImageStream Tag
+  required: true
+  value: openldap-wsweet:master
+- name: OPENLDAP_MEMORY_LIMIT
+  description: Maximum amount of memory an OpenLDAP container can use
+  displayName: OpenLDAP Memory Limit
+  required: true
+  value: 512Mi
+- name: PROMETHEUS_SERVICE_SELECTOR
+  description: Prometheus Selector (key)
+  displayName: Prometheus Service Selector Key
+  required: true
+  value: prometheus
+- name: PROMETHEUS_SERVICE_MATCH
+  description: Prometheus Selector (value)
+  displayName: Prometheus Service Selector Value
+  required: true
+  value: scrape-me
+- name: WSWEET_BASE_SUFFIX
+  description: OpenLDAP base suffix
+  displayName: LDAP Base Suffix
+  required: true
+  value: dc=demo,dc=local
+- name: WSWEET_ORG_NAME
+  description: Organization Display Name
+  displayName: Organization Display Name
+  required: true
+  value: Demo
+- name: WSWEET_ROOT_DOMAIN
+  description: Root Domain
+  displayName: Root Domain
+  required: true
+  value: demo.local
+- name: WSWEET_SMTP_RELAY
+  description: SMTP Relay
+  displayName: SMTP Relay
+  required: true
+  value: smtp.demo.local
